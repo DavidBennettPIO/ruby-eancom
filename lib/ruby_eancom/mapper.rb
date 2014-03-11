@@ -6,7 +6,6 @@ class EANCOM::Mapper
   end
 
   def self.phase(string, as_hash=false)
-
     ic = EDI::E::Interchange.parse(string)
 
     ret = []
@@ -22,13 +21,12 @@ class EANCOM::Mapper
   end
 
   def self.build(*objects)
-
-    ic = EDI::E::Interchange.new( :version => 3, :charset => 'UNOA' )
+    ic = EDI::E::Interchange.new( :version => 3, :charset => EANCOM.configuration.charset )
 
     objects.flatten.each do |object|
 
       case object.class.to_s
-        when 'EANCOM::PurchaseOrder'
+        when EANCOM.configuration.purchase_order_class.to_s
           msg = EANCOM::Mapper::PurchaseOrder.build_d96a(object, ic)
           ic.add( msg )
       end

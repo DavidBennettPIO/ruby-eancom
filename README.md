@@ -30,6 +30,23 @@ Or install it yourself as:
 
     $ gem install ruby-eancom
 
+## Configuration
+
+You can change setting using the configure block like so:
+
+    EANCOM.configure do |config|
+      config.message_assigned_code = 'EAN008'
+    end
+
+Here is a list of options with there default values:
+
+    charset = 'UNOA'
+    message_version = 'D'
+    message_release = '96A'
+    message_resp_agency = 'UN'
+    message_assigned_code = 'EAN008'
+    purchase_order_class = EANCOM::PurchaseOrder
+
 ## Usage
 
 ### Translate UN/EDIFACT into ruby classes
@@ -61,6 +78,18 @@ This may be faster then a class as it skips the class mapping.
     => "UNA:+.? 'UNB+UNOA:3+1:ZZ+...+ORDERS:D:96A:UN:EAN008..."
 
 The build method takes an array of ruby classes and creates one UN/EDIFACT message per class.
+
+### Using your own classes
+
+You can use your own classes is they respond to the `from_eancom` and `to_eancom` methods.
+
+Just set the class in the config like so:
+
+    EANCOM.configure do |config|
+      config.purchase_order_class = MyPurchaseOrder
+    end
+
+Have a look at the [EANCOM::PurchaseOrder](https://github.com/complistic-gaff/ruby-eancom/blob/master/lib/ruby_eancom/purchase_order.rb) class for an example of how this works.
 
 ## Contributing
 

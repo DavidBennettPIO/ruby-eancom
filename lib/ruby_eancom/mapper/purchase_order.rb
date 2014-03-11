@@ -15,9 +15,9 @@ class EANCOM::Mapper::PurchaseOrder
 
           case seg.cC507.d2005.to_i
             when 137
-              po[:order_date] = seg.cC507.d2380
+              po[:order_date] = Date.strptime(seg.cC507.d2380, '%Y%m%d')
             when 2
-              po[:requested_delivery_date] = seg.cC507.d2380
+              po[:requested_delivery_date] = Date.strptime(seg.cC507.d2380, '%Y%m%d')
             else
               raise "Segment DTM+#{seg.cC507.d2005}: Not accounted for!"
           end
@@ -71,7 +71,7 @@ class EANCOM::Mapper::PurchaseOrder
     if as_hash
       return po
     else
-      poc = EANCOM::PurchaseOrder.new
+      poc = EANCOM.configuration.purchase_order_class.new
       poc.from_eancom(po)
       return poc
     end
@@ -80,7 +80,13 @@ class EANCOM::Mapper::PurchaseOrder
 
   def self.build_d96a(poc, ic)
 
-    msg = ic.new_message(:msg_type=>'ORDERS', :version=>'D', :release=>'96A', :resp_agency=>'UN', :assigned_code => 'EAN008')
+    msg = ic.new_message(
+        msg_type: 'ORDERS',
+        version: EANCOM.configuration.message_version,
+        release: EANCOM.configuration.message_release,
+        resp_agency: EANCOM.configuration.message_resp_agency,
+        assigned_code: EANCOM.configuration.message_assigned_code
+    )
 
     po = poc.to_eancom
 
@@ -95,7 +101,7 @@ class EANCOM::Mapper::PurchaseOrder
 
     unless po[:order_date].nil?
       dtm = msg.new_segment( 'DTM' )
-      dtm.cC507.d2380 = po[:order_date]
+      dtm.cC507.d2380 = po[:order_date].strftime('%Y%m%d')
       dtm.cC507.d2005 = 137
       dtm.cC507.d2379 = 102
       #puts dtm.inspect
@@ -104,7 +110,7 @@ class EANCOM::Mapper::PurchaseOrder
 
     unless po[:requested_delivery_date].nil?
       dtm = msg.new_segment( 'DTM' )
-      dtm.cC507.d2380 = po[:requested_delivery_date]
+      dtm.cC507.d2380 = po[:requested_delivery_date].strftime('%Y%m%d')
       dtm.cC507.d2005 = 2
       dtm.cC507.d2379 = 102
       #puts dtm.inspect
