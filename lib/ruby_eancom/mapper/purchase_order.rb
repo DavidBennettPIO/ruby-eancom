@@ -5,14 +5,19 @@ class EANCOM::Mapper::PurchaseOrder
 
   # Class Methods
 
-  def self.phase_d96a msg, as_hash=false
-    po = {}
+  def self.phase msg, opts
+
+    is_d96a = opts[:release] == '96A'
+
+    po = {type: :purchase_order}
 
     msg.find_all {|seg| ['BGM', 'DTM', 'NAD'].include?(seg.name) }.each do |seg|
 
       case seg.name
         when 'BGM'
-          po[:order_number] = msg['BGM'].first.d1004
+          #puts seg.inspect
+          bgm = msg['BGM'].first
+          po[:order_number] = is_d96a ? bgm.d1004 : bgm.cC106.d1004
 
         when 'DTM'
 
@@ -46,15 +51,17 @@ class EANCOM::Mapper::PurchaseOrder
 
     po[:line_items] ||= []
 
-    msg.find_all {|seg| seg.name=='LIN' && seg.sg_name=='SG25'}.each do |lin|
+    msg.find_all {|seg| seg.name=='LIN'}.each do |lin|
 
       pol = {}
 
       lin.descendants_and_self.each do |seg|
-        #puts seg.inspect
+        # puts seg.inspect
         case seg.name
           when 'LIN'
+            # puts seg.inspect
             pol[:line_number] = seg.d1082
+            pol[:gtin] = seg.cC212.d7140 unless seg.cC212.d7140.nil?
           when 'PIA'
             pol[:product_identifier] = seg.aC212.first.d7140
           when 'QTY'
@@ -71,33 +78,33 @@ class EANCOM::Mapper::PurchaseOrder
 
     # puts msg['CNT'].inspect
 
-    if as_hash
-      return po
-    else
-      poc = EANCOM.configuration.purchase_order_class.new
-      poc.from_eancom(po)
-      return poc
-    end
+    po
 
   end
 
-  def self.build_d96a(poc, ic)
+  def self.build(poc, ic, opts)
+
+    is_d96a = opts[:release] == '96A'
 
     msg = ic.new_message(
         msg_type: 'ORDERS',
-        version: EANCOM.configuration.message_version,
-        release: EANCOM.configuration.message_release,
-        resp_agency: EANCOM.configuration.message_resp_agency,
-        assigned_code: EANCOM.configuration.message_assigned_code
+        version: opts[:version],
+        release: opts[:release],
+        resp_agency: opts[:resp_agency],
+        assigned_code: opts[:assigned_code]
     )
 
     po = poc.to_eancom
 
     unless po[:order_number].nil?
       bgm = msg.new_segment( 'BGM' )
-      bgm.d1004 = po[:order_number]
+      if is_d96a
+        bgm.d1004 = po[:order_number]
+      else
+        bgm.cC106.d1004 = po[:order_number]
+      end
       bgm.cC002.d1001 = 220
-      bgm.d1225 = 92
+      bgm.d1225 = is_d96a ? 92 : 9
       #puts bgm.inspect
       msg.add(bgm)
     end
@@ -123,7 +130,7 @@ class EANCOM::Mapper::PurchaseOrder
     unless po[:supplier_code].nil?
       nad = msg.new_segment( 'NAD' )
       nad.cC082.d3039 = po[:supplier_code]
-      nad.cC082.d3055 = 92
+      nad.cC082.d3055 = is_d96a ? 92 : 9
       nad.d3035 = 'SU'
       #puts nad.inspect
       msg.add(nad)
@@ -132,7 +139,7 @@ class EANCOM::Mapper::PurchaseOrder
     unless po[:ship_store_code].nil?
       nad = msg.new_segment( 'NAD' )
       nad.cC082.d3039 = po[:ship_store_code]
-      nad.cC082.d3055 = 92
+      nad.cC082.d3055 = is_d96a ? 92 : 9
       nad.d3035 = 'ST'
       #puts nad.inspect
       msg.add(nad)
@@ -141,38 +148,45 @@ class EANCOM::Mapper::PurchaseOrder
     unless po[:invoice_store_code].nil?
       nad = msg.new_segment( 'NAD' )
       nad.cC082.d3039 = po[:invoice_store_code]
-      nad.cC082.d3055 = 92
+      nad.cC082.d3055 = is_d96a ? 92 : 9
       nad.d3035 = 'IV'
       #puts nad.inspect
       msg.add(nad)
     end
 
     unless po[:line_items].nil?
-      po[:line_items].each do |li|
+      po[:line_items].each_with_index do |li, i|
 
         lin = msg.new_segment( 'LIN' )
-        lin.d1082 = li[:line_number]
-        #puts lin.inspect
+        lin.d1082 = i+1
+        lin.cC212.d7140 = li[:gtin] unless li[:gtin].nil?
+        lin.cC212.d7143 = 'SRV' unless li[:gtin].nil?
+        # puts lin.inspect
         msg.add(lin)
 
-        pia = msg.new_segment( 'PIA' )
-        pia.d4347 = 5
-        pia.aC212[0].d7140 = li[:product_identifier]
-        pia.aC212[0].d7143 = 'VN'
-        pia.aC212[0].d3055 = 91
-        #puts pia.inspect
-        msg.add(pia)
+        unless li[:product_identifier].nil?
+          pia = msg.new_segment( 'PIA' )
+          pia.d4347 = 5
+          pia.aC212[0].d7140 = li[:product_identifier]
+          # TODO config?
+          pia.aC212[0].d7143 = is_d96a ? 'VN' : 'SA'
+          pia.aC212[0].d3055 = 91 if is_d96a
+          #puts pia.inspect
+          msg.add(pia)
+        end
 
         qty = msg.new_segment( 'QTY' )
         qty.cC186.d6063 = 21
         qty.cC186.d6060 = li[:quantity]
-        qty.cC186.d6411 = 'EA'
+        # TODO config?
+        qty.cC186.d6411 = 'EA' if is_d96a
         #puts qty.inspect
         msg.add(qty)
 
         pri = msg.new_segment( 'PRI' )
         pri.cC509.d5125 = 'AAA'
         pri.cC509.d5118 = li[:price]
+        # TODO config?
         pri.cC509.d5387 = 'TU'
         #puts pri.inspect
         msg.add(pri)
@@ -184,11 +198,13 @@ class EANCOM::Mapper::PurchaseOrder
       #puts uns.inspect
       msg.add(uns)
 
-      cnt = msg.new_segment( 'CNT' )
-      cnt.cC270.d6069 = 2
-      cnt.cC270.d6066 = 1
-      #puts cnt.inspect
-      msg.add(cnt)
+      unless po[:line_items].nil?
+        cnt = msg.new_segment( 'CNT' )
+        cnt.cC270.d6069 = 2
+        cnt.cC270.d6066 = po[:line_items].size
+        #puts cnt.inspect
+        msg.add(cnt)
+      end
 
     end
 

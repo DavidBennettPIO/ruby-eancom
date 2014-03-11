@@ -12,7 +12,7 @@ These are marked as TODO:
 * ORDCHG <=> PurchaseOrderChangeRequest
 * ORDRSP <=> PurchaseOrderResponse
 
-NOTE: For the moment only d96a is supported.
+Both D.96A and D.01B are supported.
 
 Feel free to submit issues and/or pull requests for fixes and extra functionality.
 

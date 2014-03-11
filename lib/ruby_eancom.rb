@@ -17,6 +17,10 @@ module EANCOM
     EANCOM::Mapper.phase(string, as_hash)
   end
 
+  def self.build(object)
+    EANCOM::Mapper.build(object)
+  end
+
   class << self
     attr_accessor :configuration
   end
