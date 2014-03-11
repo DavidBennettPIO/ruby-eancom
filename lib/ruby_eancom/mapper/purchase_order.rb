@@ -1,3 +1,6 @@
+require 'ruby_eancom'
+require 'ruby_eancom/mapper'
+
 class EANCOM::Mapper::PurchaseOrder
 
   # Class Methods

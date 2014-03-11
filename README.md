@@ -81,7 +81,7 @@ The build method takes an array of ruby classes and creates one UN/EDIFACT messa
 
 ### Using your own classes
 
-You can use your own classes is they respond to the `from_eancom` and `to_eancom` methods.
+You can use your own classes if they respond to the `from_eancom` and `to_eancom` methods.
 
 Just set the class in the config like so:
 

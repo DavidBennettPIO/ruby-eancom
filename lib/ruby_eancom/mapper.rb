@@ -1,4 +1,5 @@
-#require 'eancom/mapper/purchase_order'
+require 'ruby_eancom'
+
 class EANCOM::Mapper
 
   def self.open(file, as_hash=false)

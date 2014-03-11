@@ -1,3 +1,5 @@
+require 'ruby_eancom/purchase_order_line'
+
 class EANCOM::PurchaseOrder
 
   attr_accessor :order_number,
