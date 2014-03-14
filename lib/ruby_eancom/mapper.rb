@@ -14,23 +14,19 @@ class EANCOM::Mapper
     ret = {sender_gln: ic.header.cS002.d0004, recipient_gln: ic.header.cS003.d0010, messages:[]}
 
     ic.each do |msg|
-      # puts msg.header.inspect
+      puts msg
 
       opts = {
           version: msg.header.cS009.d0052,
-          release: msg.header.cS009.d0054
+          release: msg.header.cS009.d0054,
+          as_hash: as_hash
       }
 
       case msg.header.cS009.d0065
         when 'ORDERS'
-          po = EANCOM::Mapper::PurchaseOrder.phase(msg, opts)
-          if as_hash
-            ret[:messages] <<  po
-          else
-            poc = EANCOM.configuration.purchase_order_class.new
-            poc.from_eancom(po)
-            ret[:messages] <<  poc
-          end
+          ret[:messages] << EANCOM::Mapper::PurchaseOrder.phase(msg, opts)
+        when 'INVOIC'
+          ret[:messages] << EANCOM::Mapper::Invoice.phase(msg, opts)
       end
     end
 
@@ -47,13 +43,39 @@ class EANCOM::Mapper
         assigned_code: EANCOM.configuration.message_assigned_code
     }
 
+
+
     hash[:messages].each do |object|
 
-      case object.class.to_s
-        when EANCOM.configuration.purchase_order_class.to_s
-          msg = EANCOM::Mapper::PurchaseOrder.build(object, ic, opts)
-          ic.add( msg )
+      # puts object.inspect
+
+      # object_hash = object.is_a?(::Hash) ? object : object.to_eancom
+
+      if object.is_a?(::Hash)
+        case object[:type]
+          when :purchase_order
+            EANCOM::Mapper::PurchaseOrder.build(ic, opts, object)
+          when :invoice
+            EANCOM::Mapper::Invoice.build(ic, opts, object)
+          else
+            raise "Building from a hash with the type #{object[:type]} is not accounted for!"
+        end
+      else
+
+        object_hash = object.to_eancom
+
+        case object.class.to_s
+          when EANCOM.configuration.purchase_order_class.to_s
+            EANCOM::Mapper::PurchaseOrder.build(ic, opts, object_hash)
+          when EANCOM.configuration.invoice_class.to_s
+            EANCOM::Mapper::Invoice.build(ic, opts, object_hash)
+          else
+            raise "Building from a #{object[:type]} class is not accounted for!"
+        end
+
       end
+
+
     end
 
     ic

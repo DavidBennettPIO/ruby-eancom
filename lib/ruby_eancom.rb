@@ -5,6 +5,7 @@ require 'edi4r/edifact'
 require 'ruby_eancom/configuration'
 require 'ruby_eancom/mapper'
 require 'ruby_eancom/mapper/purchase_order'
+require 'ruby_eancom/mapper/invoice'
 
 
 module EANCOM

@@ -5,14 +5,14 @@ This gem can translate GS1 EANCOM data between UN/EDIFACT and ruby hashes/classe
 Currently these messages/classes are supported:
 
 * ORDERS <=> PurchaseOrder
+* INVOIC <=> Invoice
 
 These are marked as TODO:
 
-* INVOIC <=> Invoice
 * ORDCHG <=> PurchaseOrderChangeRequest
 * ORDRSP <=> PurchaseOrderResponse
 
-Both D.96A and D.01B are supported.
+Both `D.96A` and `D.01B` are supported.
 
 Feel free to submit issues and/or pull requests for fixes and extra functionality.
 
